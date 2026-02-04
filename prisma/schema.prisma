@@ -1,0 +1,106 @@
+// ======================================
+// Generator
+// ======================================
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ======================================
+// Datasource
+// URL is defined in prisma.config.ts
+// ======================================
+datasource db {
+  provider = "postgresql"
+}
+
+// ======================================
+// Sites
+// ======================================
+model Site {
+  id              String          @id @default(uuid()) @db.Uuid
+  siteIdCode      String          @unique
+  siteName        String
+  locationAddress String?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  attendanceLogs  AttendanceLog[]
+
+  @@map("sites")
+}
+
+// ======================================
+// Users
+// ======================================
+model User {
+  id                String               @id @default(uuid()) @db.Uuid
+  email             String               @unique
+  passwordHash      String
+  firstName         String?
+  lastName          String?
+  role              String               // employee | team_lead | hr
+  status            String?              // active | inactive
+  workStartTime     DateTime?             @db.Time(6)
+  workEndTime       DateTime?             @db.Time(6)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  attendanceLogs    AttendanceLog[]       @relation("UserAttendance")
+  loggedAttendances AttendanceLog[]       @relation("LoggedByUser")
+  uploadedEvidence  AttendanceEvidence[]  @relation("UploadedByUser")
+  deletedEvidence   AttendanceEvidence[]  @relation("DeletedByUser")
+
+  @@map("users")
+}
+
+// ======================================
+// Attendance Logs (Core)
+// ======================================
+model AttendanceLog {
+  id               String               @id @default(uuid()) @db.Uuid
+  userId           String               @db.Uuid
+  siteId           String               @db.Uuid
+  attendanceDate   DateTime             @db.Date
+  timeIn           DateTime?
+  timeOut          DateTime?
+  loggedByUserId   String?              @db.Uuid
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  user             User                 @relation("UserAttendance", fields: [userId], references: [id])
+  site             Site                 @relation(fields: [siteId], references: [id])
+  loggedByUser     User?                @relation("LoggedByUser", fields: [loggedByUserId], references: [id])
+  evidence         AttendanceEvidence[]
+
+  @@unique([userId, attendanceDate])
+  @@index([attendanceDate])
+  @@index([siteId])
+  @@map("attendance_logs")
+}
+
+// ======================================
+// Attendance Evidence
+// ======================================
+model AttendanceEvidence {
+  id               String        @id @default(uuid()) @db.Uuid
+  attendanceId     String        @db.Uuid
+  uploadedByUserId String        @db.Uuid
+  imageUrl         String
+  imageHash        String?
+  imageType        String        // time_in | time_out
+  takenAt          DateTime?
+  uploadedAt       DateTime      @default(now())
+  expiresAt        DateTime?
+  isDeleted        Boolean       @default(false)
+  deletedAt        DateTime?
+  deletedByUserId  String?       @db.Uuid
+  deletionReason   String?
+
+  attendance       AttendanceLog @relation(fields: [attendanceId], references: [id])
+  uploadedByUser   User          @relation("UploadedByUser", fields: [uploadedByUserId], references: [id])
+  deletedByUser    User?         @relation("DeletedByUser", fields: [deletedByUserId], references: [id])
+
+  @@index([attendanceId])
+  @@map("attendance_evidence")
+}
