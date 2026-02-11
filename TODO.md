@@ -1,0 +1,2 @@
+- [x] Update performAttendanceAction in src/app/attendance/actions/attendance.ts to accept siteId parameter and use it dynamically
+- [x] Update the call in src/app/attendance/page.tsx to pass a mock siteId

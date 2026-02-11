@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-mti-navy: #C62828; 
+  --color-mti-blue: #8E0000;
+  --color-mti-slate: #424242;
+  --color-mti-bg: #F5F5F5;
+  --color-mti-white: #ffffff;
+  --radius: 0.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-mti-bg)] text-[var(--color-mti-slate)] antialiased;
+  }
+}
+
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #C62828; border-radius: 4px; }
