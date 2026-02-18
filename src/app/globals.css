@@ -1,19 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-mti-navy: #C62828; 
-  --color-mti-blue: #8E0000;
+  /* Renamed to reflect the actual colors (MTI Red Palette) */
+  --color-mti-red: #C62828; 
+  --color-mti-dark-red: #8E0000;
   --color-mti-slate: #424242;
   --color-mti-bg: #F5F5F5;
   --color-mti-white: #ffffff;
+  
+  --font-sans: 'Inter', ui-sans-serif, system-ui;
   --radius: 0.5rem;
 }
 
 @layer base {
   body {
-    @apply bg-[var(--color-mti-bg)] text-[var(--color-mti-slate)] antialiased;
+    /* Using the theme variables directly */
+    background-color: var(--color-mti-bg);
+    color: var(--color-mti-slate);
+    font-family: var(--font-sans);
+    @apply antialiased;
   }
 }
 
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-thumb { background: #C62828; border-radius: 4px; }
+/* Custom Scrollbar to match the brand */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { 
+  background: var(--color-mti-red); 
+  border-radius: 10px; 
+}

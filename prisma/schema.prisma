@@ -1,74 +1,79 @@
-// ======================================
-// Generator & Datasource
-// ======================================
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-// ======================================
-// User Model
-// ======================================
 model User {
   id             String          @id @default(uuid()) @db.Uuid
   email          String          @unique
   passwordHash   String
   firstName      String
   lastName       String
+  category       WorkCategory    @default(FIELD)
+  department     String
+  position       String
   role           String          @default("USER")
   status         String          @default("ACTIVE")
-  workStartTime  String?         // Added from your diagram
-  workEndTime    String?         // Added from your diagram
+  workStartTime  String?
+  workEndTime    String?
   createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  
-  // Relations
+  updatedAt      DateTime?       @updatedAt
   attendanceLogs AttendanceLog[]
 
   @@map("users")
 }
 
-// ======================================
-// Site Model
-// ======================================
 model Site {
   id              String          @id @default(uuid()) @db.Uuid
-  siteIdCode      String?         @unique // e.g., "MNL-001"
+  siteIdCode      String?         @unique
   siteName        String
   locationAddress String?
   isActive        Boolean         @default(true)
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
-
-  // Relations
   attendanceLogs  AttendanceLog[]
 
   @@map("sites")
 }
 
-// ======================================
-// Attendance Logs
-// ======================================
 model AttendanceLog {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String    @db.Uuid
-  siteId         String    @db.Uuid
-  attendanceDate DateTime  @db.Date
+  id             String               @id @default(uuid()) @db.Uuid
+  userId         String               @db.Uuid
+  siteId         String?              @db.Uuid
+  department     String?
+  attendanceDate DateTime             @db.Date
   timeIn         DateTime?
   timeOut        DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  // Relationship Definitions
-  user           User      @relation(fields: [userId], references: [id])
-  site           Site      @relation(fields: [siteId], references: [id])
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  activities     String?
+  evidence       AttendanceEvidence[]
+  site           Site?                @relation(fields: [siteId], references: [id])
+  user           User                 @relation(fields: [userId], references: [id])
 
   @@unique([userId, attendanceDate])
   @@index([attendanceDate])
   @@index([siteId])
+  @@index([department])
   @@map("attendance_logs")
+}
+
+model AttendanceEvidence {
+  id           String        @id @default(uuid()) @db.Uuid
+  attendanceId String        @db.Uuid
+  uploadedBy   String        @db.Uuid
+  imageUrl     String
+  imageType    String
+  takenAt      DateTime      @default(now())
+  attendance   AttendanceLog @relation(fields: [attendanceId], references: [id])
+
+  @@map("attendance_evidence")
+}
+
+enum WorkCategory {
+  HEAD_OFFICE
+  FIELD
 }
