@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export enum WorkCategory {
-  HEAD_OFFICE = "HQ",
+  HEAD_OFFICE = "HEAD_OFFICE", // Changed from "HQ" 
   FIELD = "FIELD"
 }
 

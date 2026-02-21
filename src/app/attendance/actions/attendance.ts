@@ -2,30 +2,65 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { WorkCategory } from "@prisma/client";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 /**
- * Fetches all active sites from the database.
+ * Uploads a base64 image to Supabase Storage
+ */
+async function uploadAttendanceImage(base64Data: string, email: string, action: string) {
+  try {
+    const base64Str = base64Data.split(",")[1];
+    const buffer = Buffer.from(base64Str, "base64");
+    
+    const cleanEmail = email.replace(/[@.]/g, "_");
+    const fileName = `${action}_${cleanEmail}_${Date.now()}.jpg`;
+    const filePath = `evidence/${fileName}`;
+
+    const { error } = await supabase.storage
+      .from("attendance-evidence")
+      .upload(filePath, buffer, {
+        contentType: "image/jpeg",
+        upsert: true,
+      });
+
+    if (error) throw error;
+
+    const { data: urlData } = supabase.storage
+      .from("attendance-evidence")
+      .getPublicUrl(filePath);
+
+    return urlData.publicUrl;
+  } catch (error) {
+    console.error("Storage Error:", error);
+    throw new Error("Failed to upload verification photo.");
+  }
+}
+
+/**
+ * Fetches sites directly from the DB. 
+ * If the DB is empty, it returns an empty array.
  */
 export async function getSites() {
   try {
     return await prisma.site.findMany({
       where: { isActive: true },
-      select: { id: true, siteName: true },
+      select: { id: true, siteName: true, siteIdCode: true }, 
       orderBy: { siteName: "asc" },
     });
   } catch (error) {
-    console.error("Error fetching sites:", error);
-    return [];
+    console.error("Failed to fetch sites:", error);
+    return []; // Return empty so the UI can handle the "No sites found" state
   }
 }
 
-/**
- * Fetches status by looking up User ID via Email first.
- * This prevents the "Invalid UUID" error.
- */
 export async function getAttendanceStatus(email: string) {
   if (!email || !email.includes('@')) return null;
-
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -46,46 +81,74 @@ export async function getAttendanceStatus(email: string) {
 }
 
 /**
- * Handles the full Check-In/Check-Out flow.
+ * Handles the full time-In/time-Out flow.
  */
 export async function performAttendanceAction(
   email: string, 
-  action: 'check_in' | 'check_out', 
-  locationValue: string
+  action: 'time_in' | 'time_out', 
+  locationValue: string,
+  workCategory: WorkCategory, 
+  activities?: string,
+  imagePayload?: { photo: string },
+  memberList: { name: string; role: string }[] = [] 
 ) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const now = new Date();
 
-  // 1. Resolve Email to UUID
   const user = await prisma.user.findUnique({
     where: { email: email.toLowerCase() },
   });
 
-  if (!user) {
-    throw new Error("Employee record not found. Please check your email address.");
-  }
+  if (!user) throw new Error("User not found.");
+  
+  const imageData = imagePayload?.photo; 
+  if (!imageData) throw new Error("Photo is required.");
 
   const userId = user.id;
+  const publicImageUrl = await uploadAttendanceImage(imageData, email, action);
 
-  // 2. CHECK IN LOGIC
-  if (action === 'check_in') {
+  if (action === 'time_in') {
     const existing = await prisma.attendanceLog.findUnique({
       where: { userId_attendanceDate: { userId, attendanceDate: today } },
     });
 
-    if (existing) throw new Error("Already checked in today");
+    if (existing) throw new Error("Already timed in for today.");
 
-    // UUID Check for locationValue (Site vs Department)
-    const isSiteId = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(locationValue);
+    let finalSiteId: string | null = null;
+    let finalDepartment: string | null = user.department;
+
+    if (workCategory === "FIELD") {
+      // Check if locationValue is a valid UUID
+      const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(locationValue);
+      
+      const site = await prisma.site.findFirst({
+        where: {
+          OR: [
+            ...(isUuid ? [{ id: locationValue }] : []),
+            { siteIdCode: { equals: locationValue, mode: 'insensitive' } }
+          ]
+        }
+      });
+      
+      if (site) {
+        finalSiteId = site.id;
+        finalDepartment = "FIELD WORK"; 
+      } else {
+        finalDepartment = locationValue;
+      }
+    }
 
     const attendance = await prisma.attendanceLog.create({
-      data: { 
-        userId, 
-        attendanceDate: today, 
+      data: {
+        userId,
+        attendanceDate: today,
         timeIn: now,
-        siteId: isSiteId ? locationValue : null,
-        department: !isSiteId ? locationValue : null,
+        siteId: finalSiteId,    
+        department: finalDepartment,
+        activities: activities || null,
+        imageInUrl: publicImageUrl,
+        members: memberList, // Saved as JSONB array of objects
       },
     });
 
@@ -93,18 +156,20 @@ export async function performAttendanceAction(
     return attendance;
   } 
   
-  // 3. CHECK OUT LOGIC
-  if (action === 'check_out') {
+  if (action === 'time_out') {
     const existing = await prisma.attendanceLog.findUnique({
       where: { userId_attendanceDate: { userId, attendanceDate: today } },
     });
 
-    if (!existing || !existing.timeIn) throw new Error("No active check-in record found for today.");
-    if (existing.timeOut) throw new Error("You have already checked out for today.");
+    if (!existing) throw new Error("No active record found.");
 
     const attendance = await prisma.attendanceLog.update({
-      where: { id: existing.id }, // Use the internal PK for the update
-      data: { timeOut: now },
+      where: { id: existing.id },
+      data: { 
+        timeOut: now,
+        activities: activities || existing.activities,
+        imageOutUrl: publicImageUrl, 
+      },
     });
 
     revalidatePath('/attendance');
