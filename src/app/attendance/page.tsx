@@ -224,7 +224,7 @@ export default function AttendancePage() {
                 <div className="grid grid-cols-2 gap-2">
                   <Button type="button" variant="outline" disabled={status === "completed"} onClick={startCamera} className="h-24 border-dashed border-2 flex flex-col gap-2 rounded-none hover:bg-slate-50">
                     <Camera size={20} className="text-slate-400" />
-                    <span className="text-[9px] font-black uppercase">Live Camera</span>
+                    <span className="text-[9px] font-black uppercase">Take Picture</span>
                   </Button>
 
                   <div className="relative">

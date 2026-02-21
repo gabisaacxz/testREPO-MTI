@@ -102,7 +102,7 @@ export default function HomePage() {
             </p>
             <div className="h-px w-8 bg-slate-300 mx-auto"></div>
             <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-              Automated Operations Division © 2026
+              © 2026
             </p>
         </div>
       </div>
