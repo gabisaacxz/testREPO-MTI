@@ -33,7 +33,7 @@ model Site {
   locationAddress String?
   isActive        Boolean         @default(true)
   createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  updatedAt       DateTime?       @updatedAt
   attendanceLogs  AttendanceLog[]
 
   @@map("sites")
@@ -50,6 +50,9 @@ model AttendanceLog {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   activities     String?
+  imageInUrl     String?
+  imageOutUrl    String?              @default("[]")
+  members        Json?
   evidence       AttendanceEvidence[]
   site           Site?                @relation(fields: [siteId], references: [id])
   user           User                 @relation(fields: [userId], references: [id])

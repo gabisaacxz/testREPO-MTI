@@ -1,8 +1,10 @@
-import { defineConfig } from '@prisma/config';
+import 'dotenv/config'; // Add this at the very top
+import { defineConfig, env } from 'prisma/config';
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   datasource: {
-    url: process.env.DATABASE_URL,
+    // env('DATABASE_URL') will now find the variable because of the import above
+    url: env('DATABASE_URL'),
   },
 });

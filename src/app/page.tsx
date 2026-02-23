@@ -5,9 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, ChevronRight, MapPin, Badge, ShieldCheck } from "lucide-react";
 
 /**
- * REVISED HOME PAGE - MTI Portal
- * Focus: High-Contrast Industrial UI & Martindale Branding
+ * FIX: FORCE DYNAMIC RENDERING
+ * This ensures that when users navigate from Home to Attendance, 
+ * Next.js doesn't serve a stale/cached version of the site list.
  */
+export const dynamic = "force-dynamic";
+
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#F1F5F9]">
@@ -53,9 +56,9 @@ export default function HomePage() {
               <CardHeader className="px-8 pt-8">
                 <div className="flex justify-between items-start mb-6">
                     <div className="bg-slate-50 w-14 h-14 rounded-none flex items-center justify-center group-hover:bg-[#C62828] transition-all duration-300 border border-slate-100 shadow-inner">
-                      <Clock 
-                        className="text-[#C62828] group-hover:text-white transition-colors" 
-                        size={26} 
+                      <Clock
+                        className="text-[#C62828] group-hover:text-white transition-colors"
+                        size={26}
                         strokeWidth={2.5}
                       />
                     </div>
@@ -102,7 +105,7 @@ export default function HomePage() {
             </p>
             <div className="h-px w-8 bg-slate-300 mx-auto"></div>
             <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-              Automated Operations Division © 2026
+              © 2026
             </p>
         </div>
       </div>

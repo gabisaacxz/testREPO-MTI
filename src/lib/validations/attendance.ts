@@ -1,7 +1,12 @@
 import { z } from "zod";
 
+/**
+ * SRP: This file is responsible ONLY for defining the 
+ * shape and validation rules of Attendance data.
+ */
+
 export enum WorkCategory {
-  HEAD_OFFICE = "HQ",
+  HEAD_OFFICE = "HEAD_OFFICE",
   FIELD = "FIELD"
 }
 
@@ -11,13 +16,7 @@ export const DEPARTMENTS = [
   "Logistics",
   "Operations",
   "Sales and SAQ",
-] as const;
-
-// Added Site Constants to match your dropdown requirement
-export const PROJECT_SITES = [
-  { id: "MTI-MANILA-01", name: "Manila Tower Project" },
-  { id: "MTI-CEBU-05", name: "Cebu Data Center" },
-  { id: "MTI-DAVAO-12", name: "Davao Telecom Hub" },
+  "Telecom Enterprise"
 ] as const;
 
 export const attendanceFormSchema = z
@@ -29,8 +28,12 @@ export const attendanceFormSchema = z
     activities: z.string().optional(),
     attendanceDate: z.string(),
   })
-  // This refinement handles the "Conditional" logic of your UI
+  /**
+   * Logical Validation: Ensures that users provide the 
+   * correct location based on their work nature.
+   */
   .superRefine((data, ctx) => {
+    // If Office: Department is mandatory
     if (data.workCategory === WorkCategory.HEAD_OFFICE && !data.department) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -39,6 +42,7 @@ export const attendanceFormSchema = z
       });
     }
 
+    // If Field: Project Site is mandatory
     if (data.workCategory === WorkCategory.FIELD && !data.siteId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
